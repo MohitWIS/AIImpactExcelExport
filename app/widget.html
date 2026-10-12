@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Export to Excel</title>
+  <style>
+    :root {
+      --ink: #17212b;
+      --muted: #5b6875;
+      --line: #e3e8ee;
+      --line-strong: #c8d1db;
+      --page: #f3f5f8;
+      --accent: #2563eb;
+      --accent-dark: #1d4fd8;
+      --ok: #157347;
+      --ok-bg: #e7f6ed;
+      --warn: #8a5a00;
+      --warn-bg: #fff3d1;
+      --error: #a12020;
+      --error-bg: #fde9e9;
+      --info-bg: #eef2f7;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 14px;
+      line-height: 1.45;
+      color: var(--ink);
+      background: var(--page);
+    }
+
+    .card {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 8px 24px rgba(16, 24, 40, 0.06);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .hint {
+      margin: 2px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .field {
+      display: block;
+      margin-top: 16px;
+      font-weight: 500;
+    }
+
+    .tools {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .tools input[type=text] {
+      flex: 1;
+      min-width: 160px;
+      margin: 0;
+      padding: 7px 10px;
+    }
+
+    .tools button {
+      padding: 7px 12px;
+      font-size: 13px;
+    }
+
+    .records {
+      margin-top: 8px;
+      max-height: 360px;
+      overflow: auto;
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+    }
+
+    .records table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      font-weight: 400;
+    }
+
+    .records th,
+    .records td {
+      padding: 7px 10px;
+      text-align: left;
+      border-bottom: 1px solid #eef1f5;
+      white-space: nowrap;
+      max-width: 240px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .records th {
+      position: sticky;
+      top: 0;
+      background: #f7f9fb;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .records tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .records tbody tr {
+      cursor: pointer;
+    }
+
+    .records tbody tr:hover {
+      background: #f7f9fb;
+    }
+
+    .records tbody tr.ticked {
+      background: #eef4ff;
+    }
+
+    .records .chk {
+      width: 1%;
+    }
+
+    .records .num {
+      color: var(--muted);
+      text-align: right;
+    }
+
+    select,
+    input[type=text] {
+      width: 100%;
+      margin-top: 6px;
+      padding: 9px 10px;
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      font: inherit;
+    }
+
+    .layout {
+      margin: 14px 0 0;
+      padding: 8px 12px 10px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+    }
+
+    .layout legend {
+      padding: 0 4px;
+      font-weight: 500;
+    }
+
+    .layout label {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin: 6px 0;
+      font-size: 13px;
+    }
+
+    .layout input {
+      margin-top: 3px;
+    }
+
+    .summary th {
+      white-space: nowrap;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    button,
+    .link-btn {
+      padding: 9px 18px;
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      font: inherit;
+      font-weight: 500;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    button:hover:not(:disabled),
+    .link-btn:hover {
+      background: #f4f6f9;
+    }
+
+    button.primary {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #fff;
+    }
+
+    button.primary:hover:not(:disabled) {
+      border-color: var(--accent-dark);
+      background: var(--accent-dark);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .status {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-top: 16px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-weight: 500;
+    }
+
+    .status::before {
+      content: "";
+      flex: none;
+      width: 8px;
+      height: 8px;
+      margin-top: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .status.info,
+    .status.busy {
+      background: var(--info-bg);
+      color: #3e4c59;
+    }
+
+    .status.ok {
+      background: var(--ok-bg);
+      color: var(--ok);
+    }
+
+    .status.warn {
+      background: var(--warn-bg);
+      color: var(--warn);
+    }
+
+    .status.error {
+      background: var(--error-bg);
+      color: var(--error);
+    }
+
+    .status.busy::before {
+      width: 14px;
+      height: 14px;
+      margin-top: 3px;
+      border: 2px solid currentColor;
+      border-top-color: transparent;
+      background: none;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .summary {
+      margin-top: 14px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .summary table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .summary th,
+    .summary td {
+      padding: 7px 12px;
+      border-bottom: 1px solid #eef1f5;
+      text-align: left;
+      vertical-align: top;
+      overflow-wrap: anywhere;
+    }
+
+    .summary th {
+      background: #f7f9fb;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .summary tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .summary td.num {
+      text-align: right;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="card">
+    <h1>Export to Excel</h1>
+    <p class="hint">Tick the records to export. Each comes with its subforms: one Excel file per record, or one file
+      for all ticked records, with a sheet per subform either way.</p>
+
+    <div class="field">
+      <span id="listTitle">Records</span>
+      <div class="tools">
+        <input type="text" id="recordFilter" placeholder="Filter records…" aria-label="Filter records">
+        <button type="button" id="selectAll">Select all</button>
+        <button type="button" id="selectNone">Clear</button>
+        <button type="button" id="reloadBtn" title="Fetch the records again">Reload</button>
+        <span id="selectedCount" class="hint"></span>
+      </div>
+      <div id="recordBox" class="records" hidden>
+        <table>
+          <thead>
+            <tr id="recordHead"></tr>
+          </thead>
+          <tbody id="recordRows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <fieldset class="layout">
+      <legend>Layout</legend>
+      <label><input type="radio" name="layout" value="record" checked> One Excel file per record: a Field / Value sheet
+        plus a sheet per subform. Several records come as one zip.</label>
+      <label><input type="radio" name="layout" value="all"> One Excel file for all ticked records: a sheet of records
+        plus a sheet per subform, with each subform's rows grouped by record.</label>
+    </fieldset>
+
+    <div class="actions">
+      <button id="exportBtn" class="primary" disabled>Export to Excel</button>
+      <a id="downloadLink" class="link-btn" hidden>Download again</a>
+    </div>
+
+    <div id="status" class="status busy">Loading…</div>
+    <div id="summary" class="summary" hidden>
+      <table>
+        <thead>
+          <tr>
+            <th>File or sheet</th>
+            <th>Contents</th>
+            <th>Rows</th>
+          </tr>
+        </thead>
+        <tbody id="summaryRows"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="https://static.zohocdn.com/creator/widgets/version/2.0/widgetsdk-min.js"></script>
+  <script src="lib/xlsx.full.min.js"></script>
+  <script src="lib/jszip.min.js"></script>
+  <script>
+    (function () {
+      // The report whose records are listed. A page parameter "report" overrides it.
+      const REPORT_NAME = 'AI_S_IMPACT_ON_SKILLING_SECTOR_CONSULTATION_Report';
+      // Fields shown in the list when the records have them; otherwise the first few fields are shown.
+      const LIST_FIELDS = ['Sector_Sub_sector_Name', 'Name_of_Respondent', 'Organisation', 'Organisation_Type', 'Added_Time'];
+      const LIST_COLUMNS = 5;
+      // Records fetched per request; Creator allows 200, 500 or 1000.
+      const PAGE_SIZE = 1000;
+
+      const $ = (id) => document.getElementById(id);
+      const statusEl = $('status');
+      const listTitle = $('listTitle');
+      const recordFilter = $('recordFilter');
+      const recordBox = $('recordBox');
+      const recordHead = $('recordHead');
+      const recordRows = $('recordRows');
+      const selectedCount = $('selectedCount');
+      const exportBtn = $('exportBtn');
+      const downloadLink = $('downloadLink');
+      const summaryEl = $('summary');
+      const summaryRows = $('summaryRows');
+
+      // The Creator SDK only connects when Creator itself loads the widget, which it does with a serviceOrigin parameter.
+      const inCreator = typeof ZOHO !== 'undefined' && /[?&]serviceOrigin=/.test(location.search);
+      let reportName = REPORT_NAME;
+      let reportTitle = '';
+      // The report's records in the order Creator returns them, and the text each row is filtered by.
+      let allRecords = [];
+      let searchText = [];
+      // Display names by link name, from the form's metadata.
+      let labels = {};
+      let lastUrl = null;
+
+      // type: 'info' | 'busy' (shows a spinner) | 'ok' | 'warn' | 'error'
+      function setStatus(type, text) {
+        statusEl.className = 'status ' + type;
+        statusEl.textContent = text;
+      }
+
+      function errorText(err) {
+        if (!err) return 'unknown error';
+        if (typeof err === 'string') return err;
+        return err.message || err.description || err.error || JSON.stringify(err);
+      }
+
+      /* ---------- The record list ---------- */
+
+      const rowBoxes = () => Array.from(recordRows.querySelectorAll('input[name=record]'));
+      const tickedBoxes = () => rowBoxes().filter((box) => box.checked);
+      const tickedIds = () => new Set(tickedBoxes().map((box) => box.value));
+      const tickedRecords = () => tickedBoxes().map((box) => allRecords[Number(box.closest('tr').dataset.index)]);
+
+      function updateCount() {
+        const shown = rowBoxes().filter((box) => !box.closest('tr').hidden).length;
+        selectedCount.textContent = tickedBoxes().length + ' of ' + allRecords.length + ' selected'
+          + (shown < allRecords.length ? ' (' + shown + ' shown)' : '');
+      }
+
+      // The fields shown as list columns: the preferred ones the records have, else the first few plain fields.
+      function listColumns(records) {
+        const plain = columnsOf(records).filter((c) => c !== 'ID' && !records.some((r) => isSubform(r[c])));
+        const preferred = LIST_FIELDS.filter((c) => plain.includes(c));
+        return (preferred.length ? preferred : plain).slice(0, LIST_COLUMNS);
+      }
+
+      function setTicked(tr, on) {
+        tr.querySelector('input[name=record]').checked = on;
+        tr.classList.toggle('ticked', on);
+      }
+
+      // ticked: IDs of the records to show as ticked.
+      function renderRecords(ticked) {
+        const columns = listColumns(allRecords);
+        recordHead.textContent = '';
+        const headBox = document.createElement('input');
+        headBox.type = 'checkbox';
+        headBox.title = 'Tick or untick every record shown';
+        headBox.addEventListener('change', () => {
+          for (const tr of recordRows.rows) if (!tr.hidden) setTicked(tr, headBox.checked);
+          updateCount();
+        });
+        const chk = document.createElement('th');
+        chk.className = 'chk';
+        chk.appendChild(headBox);
+        const num = document.createElement('th');
+        num.className = 'num';
+        num.textContent = '#';
+        recordHead.append(chk, num);
+        for (const c of columns) {
+          const th = document.createElement('th');
+          th.textContent = labelOf(labels, c);
+          recordHead.appendChild(th);
+        }
+
+        recordRows.textContent = '';
+        searchText = [];
+        allRecords.forEach((record, i) => {
+          searchText.push(Object.keys(record).filter((k) => !k.startsWith('zc_') && !isSubform(record[k])).map((k) => cell(record[k])).join(' ').toLowerCase());
+          const tr = recordRows.insertRow();
+          tr.dataset.index = i;
+          const box = document.createElement('input');
+          box.type = 'checkbox';
+          box.name = 'record';
+          box.value = String(record.ID || i);
+          const first = tr.insertCell();
+          first.className = 'chk';
+          first.appendChild(box);
+          const n = tr.insertCell();
+          n.className = 'num';
+          n.textContent = i + 1;
+          for (const c of columns) {
+            const td = tr.insertCell();
+            td.textContent = td.title = String(cell(record[c]));
+          }
+          setTicked(tr, ticked.has(box.value));
+          tr.addEventListener('click', (e) => {
+            setTicked(tr, e.target === box ? box.checked : !box.checked);
+            updateCount();
+          });
+        });
+        recordBox.hidden = false;
+        applyFilter();
+      }
+
+      function applyFilter() {
+        const term = recordFilter.value.trim().toLowerCase();
+        for (const tr of recordRows.rows) tr.hidden = term !== '' && !searchText[Number(tr.dataset.index)].includes(term);
+        updateCount();
+      }
+
+      /* ---------- Reading the app ---------- */
+
+      async function loadReportTitle() {
+        try {
+          const response = await ZOHO.CREATOR.META.getReports();
+          const reports = (response && (response.reports || response.data)) || [];
+          const report = reports.find((r) => r.link_name === reportName);
+          reportTitle = (report && report.display_name) || header(reportName);
+        } catch (e) {
+          reportTitle = header(reportName);
+        }
+        listTitle.textContent = reportTitle;
+      }
+
+      // Fetches the report's records and lists them. ticked: IDs to show as ticked.
+      async function loadRecords(ticked) {
+        exportBtn.disabled = true;
+        recordBox.hidden = true;
+        summaryEl.hidden = true;
+        try {
+          allRecords = await fetchAll(reportName);
+          if (!allRecords.length) {
+            renderRecords(new Set());
+            setStatus('warn', 'No records in ' + reportTitle + '.');
+            return;
+          }
+          setStatus('busy', 'Reading field names…');
+          labels = await loadLabels(allRecords);
+          renderRecords(ticked);
+          exportBtn.disabled = false;
+          setStatus('info', allRecords.length + ' record(s) in ' + reportTitle + '. '
+            + (tickedBoxes().length ? 'The selected ones are ticked. ' : '') + 'Tick the ones to export and click Export.');
+        } catch (err) {
+          setStatus('error', 'Could not load the records: ' + errorText(err));
+        }
+      }
+
+      // Every record of the report, page by page.
+      async function fetchAll(report) {
+        const records = [];
+        let cursor;
+        do {
+          const config = { report_name: report, field_config: 'all', max_records: PAGE_SIZE };
+          if (cursor) config.record_cursor = cursor;
+          const response = await getRecords(config);
+          records.push(...response.data);
+          cursor = response.record_cursor;
+          setStatus('busy', 'Fetching records… ' + records.length + ' so far');
+        } while (cursor);
+        return records;
+      }
+
+      // Creator answers "no records" (code 9280) as an error; here it is an empty page.
+      async function getRecords(config) {
+        try {
+          const response = await ZOHO.CREATOR.DATA.getRecords(config);
+          if (!response || response.code !== 3000) throw response;
+          return response;
+        } catch (err) {
+          if (err && (err.code === 9280 || /no records/i.test(errorText(err)))) return { data: [] };
+          throw err;
+        }
+      }
+
+      /* ---------- Building the workbook ---------- */
+
+      // A subform value is a list of row objects (multi-select lookups are also lists of objects,
+      // but each of those carries a display_value).
+      const isSubform = (value) => Array.isArray(value) && value.length > 0
+        && value.every((item) => item && typeof item === 'object' && !('display_value' in item));
+
+      // What goes in a cell: lookups and names by their display text, lists joined, the rest as is.
+      function cell(value) {
+        if (value === null || value === undefined) return '';
+        if (Array.isArray(value)) return value.map(cell).filter((v) => v !== '').join(', ');
+        if (typeof value === 'object') return 'display_value' in value ? cell(value.display_value) : JSON.stringify(value);
+        return value;
+      }
+
+      function recordLabel(record) {
+        const key = Object.keys(record).find((k) => /name/i.test(k) && !isSubform(record[k]) && cell(record[k]) !== '');
+        return key ? String(cell(record[key])) : String(record.ID || '');
+      }
+
+      // A readable heading from a link name: "B_3_1_a_Number_of_Firms" -> "B.3.1.a Number of Firms",
+      // "Senior_experienced_10_yrs" -> "Senior experienced 10 yrs".
+      function header(key) {
+        const m = key.match(/^([A-Za-z]|\d+)((?:_\d+)+)(?:_([a-e]))?_(.+)$/);
+        if (!m) return key.replace(/_/g, ' ');
+        return m[1] + m[2].replace(/_/g, '.') + (m[3] ? '.' + m[3] : '') + ' ' + m[4].replace(/_/g, ' ');
+      }
+
+      // Display names of the report's fields, read from the form the records belong to. The report
+      // does not say which form that is, so the form whose fields best cover the record keys is used.
+      // Returns { linkName: { name, columns: { subformColumn: name } } }, empty when unavailable.
+      async function loadLabels(records) {
+        const keys = new Set();
+        for (const record of records) for (const key of Object.keys(record)) keys.add(key);
+        let forms = [];
+        try {
+          const response = await ZOHO.CREATOR.META.getForms();
+          forms = (response && (response.forms || response.data)) || [];
+        } catch (e) { return {}; }
+        let best = null;
+        for (const form of forms.filter((f) => f.link_name)) {
+          try {
+            const response = await ZOHO.CREATOR.META.getFields({ form_name: form.link_name });
+            const fields = (response && (response.fields || response.data)) || [];
+            const score = fields.filter((f) => keys.has(f.link_name)).length;
+            if (score && (!best || score > best.score)) best = { score, fields };
+          } catch (e) { /* a form that cannot be read is skipped */ }
+        }
+        if (!best || best.score < 2) return {};
+        const labels = {};
+        for (const f of best.fields) {
+          const nested = f.fields || (f.subform && f.subform.fields) || f.subform_fields || [];
+          labels[f.link_name] = { name: f.display_name || header(f.link_name), columns: {} };
+          for (const s of nested) labels[f.link_name].columns[s.link_name] = s.display_name || header(s.link_name);
+        }
+        return labels;
+      }
+
+      const labelOf = (labels, key) => (labels[key] ? labels[key].name : header(key));
+      const columnLabelOf = (labels, key, column) => (labels[key] && labels[key].columns[column]) || header(column);
+
+      // Excel sheet names: at most 31 characters, none of [ ] : * ? / \, unique within the workbook.
+      function sheetName(name, used) {
+        const base = String(name).replace(/[\[\]:*?/\\]/g, ' ').replace(/\s+/g, ' ').replace(/^'+|'+$/g, '').trim().slice(0, 31).trim() || 'Sheet';
+        let candidate = base;
+        for (let n = 2; used.has(candidate.toLowerCase()); n++) {
+          const suffix = ' ' + n;
+          candidate = base.slice(0, 31 - suffix.length).trim() + suffix;
+        }
+        used.add(candidate.toLowerCase());
+        return candidate;
+      }
+
+      // Columns in the order they first appear across records, ID first.
+      function columnsOf(objects) {
+        const columns = [];
+        for (const object of objects) {
+          // Keys starting with zc_ (such as zc_display_value) are Creator's internals, not fields.
+          for (const key of Object.keys(object)) if (!columns.includes(key) && !key.startsWith('zc_')) columns.push(key);
+        }
+        return columns.includes('ID') ? ['ID'].concat(columns.filter((c) => c !== 'ID')) : columns;
+      }
+
+      function buildWorkbook(records, mainName, labels) {
+        const used = new Set();
+        const workbook = XLSX.utils.book_new();
+        const summary = [];
+
+        // A field is a subform if any record has rows in it (an empty subform is just an empty list).
+        const subforms = [];
+        for (const record of records) {
+          for (const key of Object.keys(record)) if (isSubform(record[key]) && !subforms.includes(key)) subforms.push(key);
+        }
+
+        const mainColumns = columnsOf(records).filter((c) => !subforms.includes(c));
+        const mainRows = records.map((record) => mainColumns.map((c) => cell(record[c])));
+        const mainSheet = sheetName(mainName, used);
+        XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([mainColumns.map((c) => labelOf(labels, c))].concat(mainRows)), mainSheet);
+        summary.push({ sheet: mainSheet, contents: 'Records of ' + mainName, rows: records.length });
+
+        // One sheet per subform, its rows grouped by record: a "Record: name" line, the column
+        // headings, that record's rows, then a blank line. Subform rows' own IDs are internal and left out.
+        for (const key of subforms) {
+          const allRows = [];
+          for (const record of records) if (isSubform(record[key])) allRows.push(...record[key]);
+          const columns = columnsOf(allRows).filter((c) => c !== 'ID');
+          const headings = columns.map((c) => columnLabelOf(labels, key, c));
+          const sheetRows = [];
+          let count = 0;
+          for (const record of records) {
+            sheetRows.push(['Record: ' + recordLabel(record)]);
+            if (isSubform(record[key])) {
+              sheetRows.push(headings);
+              for (const row of record[key]) sheetRows.push(columns.map((c) => cell(row[c])));
+              count += record[key].length;
+            } else {
+              sheetRows.push(['(no rows)']);
+            }
+            sheetRows.push([]);
+          }
+          const title = labelOf(labels, key);
+          const name = sheetName(title, used);
+          XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(sheetRows), name);
+          summary.push({ sheet: name, contents: 'Subform ' + title + ', grouped by record', rows: count });
+        }
+
+        addIndexSheet(workbook, summary, used);
+        return { workbook, summary };
+      }
+
+      // An index, since long subform names are cut to fit the sheet tab.
+      function addIndexSheet(workbook, summary, used) {
+        const index = sheetName('Sheets', used);
+        XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([['Sheet', 'Contents', 'Rows']].concat(summary.map((s) => [s.sheet, s.contents, s.rows]))), index);
+      }
+
+      // Subform fields of a set of records: those with rows in at least one record.
+      function subformsOf(records) {
+        const subforms = [];
+        for (const record of records) {
+          for (const key of Object.keys(record)) if (isSubform(record[key]) && !subforms.includes(key)) subforms.push(key);
+        }
+        return subforms;
+      }
+
+      // A workbook for one record: its fields as Field / Value rows, then a sheet per subform that has rows.
+      function buildRecordWorkbook(record, labels, subforms) {
+        const used = new Set();
+        const workbook = XLSX.utils.book_new();
+        const summary = [];
+
+        const fields = Object.keys(record).filter((k) => !subforms.includes(k) && !k.startsWith('zc_'));
+        const rows = fields.map((k) => [labelOf(labels, k), cell(record[k])]);
+        const mainSheet = sheetName('Record', used);
+        XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([['Field', 'Value']].concat(rows)), mainSheet);
+        summary.push({ sheet: mainSheet, contents: 'Fields of ' + recordLabel(record), rows: rows.length });
+
+        for (const key of subforms) {
+          if (!isSubform(record[key])) continue;
+          const columns = columnsOf(record[key]).filter((c) => c !== 'ID');
+          const data = record[key].map((row) => columns.map((c) => cell(row[c])));
+          const title = labelOf(labels, key);
+          const name = sheetName(title, used);
+          XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([columns.map((c) => columnLabelOf(labels, key, c))].concat(data)), name);
+          summary.push({ sheet: name, contents: 'Subform ' + title, rows: data.length });
+        }
+        addIndexSheet(workbook, summary, used);
+        return { workbook, summary };
+      }
+
+      const fileSafe = (text) => String(text).replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60) || 'record';
+      const xlsxBlob = (workbook) => new Blob([XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+      function offerDownload(blob, fileName) {
+        if (lastUrl) URL.revokeObjectURL(lastUrl);
+        lastUrl = URL.createObjectURL(blob);
+        downloadLink.href = lastUrl;
+        downloadLink.download = fileName;
+        downloadLink.textContent = 'Download ' + fileName;
+        downloadLink.hidden = false;
+        const link = document.createElement('a');
+        link.href = lastUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      }
+
+      function renderSummary(summary) {
+        summaryRows.textContent = '';
+        for (const s of summary) {
+          const tr = summaryRows.insertRow();
+          tr.insertCell().textContent = s.sheet;
+          tr.insertCell().textContent = s.contents;
+          const rows = tr.insertCell();
+          rows.className = 'num';
+          rows.textContent = s.rows;
+        }
+        summaryEl.hidden = false;
+      }
+
+      // Exports the ticked records: one workbook for all of them, or one per record (zipped when
+      // there are several).
+      async function exportRecords() {
+        const records = tickedRecords();
+        if (!records.length) {
+          setStatus('warn', 'Tick at least one record.');
+          return;
+        }
+        exportBtn.disabled = true;
+        summaryEl.hidden = true;
+        downloadLink.hidden = true;
+        try {
+          const stamp = new Date().toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-');
+          const perRecord = document.querySelector('input[name=layout]:checked').value === 'record';
+          if (!perRecord) {
+            setStatus('busy', 'Building the Excel file…');
+            const { workbook, summary } = buildWorkbook(records, reportTitle, labels);
+            const fileName = fileSafe(reportName) + '_' + stamp + '.xlsx';
+            offerDownload(xlsxBlob(workbook), fileName);
+            setStatus('ok', 'Exported ' + records.length + ' record(s) to ' + fileName + ' (' + summary.length + ' sheets). If the download did not start, use the link above.');
+            renderSummary(summary);
+            return;
+          }
+
+          // One workbook per record; more than one goes into a zip so the browser allows the download.
+          const subforms = subformsOf(records);
+          const files = records.map((record, i) => {
+            setStatus('busy', 'Building Excel file ' + (i + 1) + ' of ' + records.length + '…');
+            const { workbook, summary } = buildRecordWorkbook(record, labels, subforms);
+            return { name: fileSafe(recordLabel(record)) + '_' + (record.ID || i + 1) + '.xlsx', blob: xlsxBlob(workbook), summary };
+          });
+          if (files.length === 1) {
+            offerDownload(files[0].blob, files[0].name);
+            setStatus('ok', 'Exported 1 record to ' + files[0].name + ' (' + files[0].summary.length + ' sheets). If the download did not start, use the link above.');
+            renderSummary(files[0].summary);
+            return;
+          }
+          const zip = new JSZip();
+          for (const file of files) zip.file(file.name, file.blob);
+          const zipName = fileSafe(reportName) + '_' + stamp + '.zip';
+          offerDownload(await zip.generateAsync({ type: 'blob' }), zipName);
+          setStatus('ok', 'Exported ' + files.length + ' records as ' + files.length + ' Excel files in ' + zipName + '. If the download did not start, use the link above.');
+          renderSummary(files.map((file) => ({
+            sheet: file.name,
+            contents: file.summary.map((s) => s.sheet).join(', '),
+            rows: file.summary.reduce((sum, s) => sum + s.rows, 0),
+          })));
+        } catch (err) {
+          setStatus('error', 'Export failed: ' + errorText(err));
+        } finally {
+          exportBtn.disabled = false;
+        }
+      }
+
+      async function init() {
+        if (typeof XLSX === 'undefined' || typeof JSZip === 'undefined') {
+          setStatus('error', 'The spreadsheet library did not load. Upload the widget again.');
+          return;
+        }
+        if (!inCreator) {
+          setStatus('info', 'Open this page inside the Creator app to list and export its records.');
+          return;
+        }
+        // Page parameters: "report" picks another report, "ids" (comma-separated) pre-ticks records.
+        let params = {};
+        try { params = (await ZOHO.CREATOR.UTIL.getQueryParams()) || {}; } catch (e) { /* no page parameters */ }
+        if (params.report) reportName = String(params.report);
+        const ticked = new Set(params.ids ? String(params.ids).split(',').map((s) => s.trim()).filter(Boolean) : []);
+        await loadReportTitle();
+        await loadRecords(ticked);
+      }
+
+      recordFilter.addEventListener('input', applyFilter);
+      $('selectAll').addEventListener('click', () => {
+        for (const tr of recordRows.rows) if (!tr.hidden) setTicked(tr, true);
+        updateCount();
+      });
+      $('selectNone').addEventListener('click', () => {
+        for (const tr of recordRows.rows) setTicked(tr, false);
+        updateCount();
+      });
+      $('reloadBtn').addEventListener('click', () => { if (inCreator) loadRecords(tickedIds()); });
+      exportBtn.addEventListener('click', exportRecords);
+      init();
+    })();
+  </script>
+</body>
+
+</html>
